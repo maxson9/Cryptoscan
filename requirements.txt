@@ -1,0 +1,17 @@
+base58
+bs4
+docx2python
+git+https://github.com/Naggafin/coinaddrvalidator.git # Temporary git until update of coinaddr library on pypi
+monero
+openpyxl
+pandas
+psutil
+py7zr
+PyMuPDF
+pyqt5
+rarfile
+striprtf
+web3>=6.15.1
+
+#libewf-python # Only needed for forensic_read.py which is work in progress.
+#pytsk3

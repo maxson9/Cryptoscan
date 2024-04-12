@@ -507,7 +507,7 @@ def read_in_chunks(file_instance, overlap_size=1024):
             prev_chunk_end = chunk[-overlap_size:]
 
 
-def process_file(inputmaxsize, excluded_paths, archive_path, file_path):
+def process_file(inputmaxsize, excluded_paths, archive_path, temppath, file_path):
     file_instance = FileHandler(file_path)
     filesize = file_instance.getfilesize()
 
@@ -533,7 +533,7 @@ def process_file(inputmaxsize, excluded_paths, archive_path, file_path):
 
         if file_instance.getfileextension() in supported_archives:
             print(f"{printabletime}: Extracting files from: {file_path_printable}")
-            results = process_archive_file(inputmaxsize, excluded_paths, file_path)
+            results = process_archive_file(inputmaxsize, excluded_paths, temppath, file_path)
         else:
             file_data = file_instance.getspecialfiledata()
 
@@ -597,10 +597,14 @@ def extract_archive(archive_file_path, extract_to):
         print(f"Error extracting archive {archive_file_path}: {err}")
 
 
-def process_archive_file(inputmaxsize, excluded_paths, archive_file_path):
+def process_archive_file(inputmaxsize, excluded_paths, temppath_, archive_file_path):
     results = []
     try:
-        with tempfile.TemporaryDirectory() as temp_dir:
+        if temppath_:
+            temp_dir = tempfile.TemporaryDirectory(dir=temppath_)
+        else:
+            temp_dir = tempfile.TemporaryDirectory()
+        with temp_dir as temp_dir:
             extract_archive(archive_file_path, temp_dir)
 
             while True:
@@ -627,7 +631,7 @@ def process_archive_file(inputmaxsize, excluded_paths, archive_file_path):
                     relative_path = os.path.relpath(full_path, temp_dir)
                     archive_file_path_printable = os.path.join(archive_file_path, relative_path).replace('/', "\\")
 
-                    file_results = process_file(inputmaxsize, excluded_paths, archive_file_path_printable, full_path)
+                    file_results = process_file(inputmaxsize, excluded_paths, archive_file_path_printable, temppath_, full_path)
                     if file_results:
                         results.append(file_results)
 

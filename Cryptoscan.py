@@ -84,13 +84,13 @@ def write_to_csv(result, file, stats_):
         print("Error in writing to .csv: " + str(err))
 
 
-def process_single_file(path, max_filesize, excl_paths, stats_):
+def process_single_file(path, max_filesize, excl_paths, stats_, temppath_):
     lock = multiprocessing.Lock()
     extension = os.path.splitext(path)[1].lower()
     if extension == '.ufdr':
-        process_ufdr(path, max_filesize, excl_paths,stats_)
+        process_ufdr(path, max_filesize, excl_paths,stats_, temppath_)
     else:
-        result = Process.process_file(max_filesize, excl_paths, None, path)
+        result = Process.process_file(max_filesize, excl_paths, None, temppath_, path)
         try:
             stats_.processed_files_count += 1
             stats_.total_bytes_processed += int(result[2])
@@ -102,8 +102,12 @@ def process_single_file(path, max_filesize, excl_paths, stats_):
             print(f'Error: {err}')
 
 
-def process_ufdr(path, max_filesize, excl_paths, stats_):
-    with tempfile.TemporaryDirectory() as temp_dir:
+def process_ufdr(path, max_filesize, excl_paths, stats_, temppath_):
+    if temppath_:
+        temp_dir = tempfile.TemporaryDirectory(dir=temppath_)
+    else:
+        temp_dir = tempfile.TemporaryDirectory()
+    with temp_dir as temp_dir:
         with zipfile.ZipFile(path, 'r') as archive_ref:
             print("Processing .ufdr file. Make sure you have enough storage space as all files will be extracted to a temp directory.")
             archive_ref.extractall(temp_dir)
@@ -115,7 +119,7 @@ def process_ufdr(path, max_filesize, excl_paths, stats_):
             try:
                 with open(output_name, 'a') as file:
                     file.write('Pattern,Found addresses,Filename,Offset\n')
-                    run_worker = pool.imap_unordered(functools.partial(Process.process_file, max_filesize, excl_paths, None), file_generator)
+                    run_worker = pool.imap_unordered(functools.partial(Process.process_file, max_filesize, excl_paths, None, temppath_), file_generator)
                     for result in run_worker:
                         if result:
                             stats_.processed_files_count += 1
@@ -129,7 +133,7 @@ def process_ufdr(path, max_filesize, excl_paths, stats_):
             pool.join()
 
 
-def process_directory(path, max_filesize, excl_paths, stats_):
+def process_directory(path, max_filesize, excl_paths, stats_, temppath_):
     cpucount = multiprocessing.cpu_count() - 2
     pool = multiprocessing.Pool(cpucount, init_worker)
     lock = multiprocessing.Lock()
@@ -138,7 +142,7 @@ def process_directory(path, max_filesize, excl_paths, stats_):
     try:
         with open(output_name, 'a') as file:
             file.write('Pattern,Found addresses,Filename,Offset\n')
-            run_worker = pool.imap_unordered(functools.partial(Process.process_file, max_filesize, excl_paths, None), file_generator)
+            run_worker = pool.imap_unordered(functools.partial(Process.process_file, max_filesize, excl_paths, None, temppath_), file_generator)
             for result in run_worker:
                 if result:
                     stats_.processed_files_count += 1
@@ -153,11 +157,11 @@ def process_directory(path, max_filesize, excl_paths, stats_):
     pool.join()
 
 
-def startprocessing(search_path, max_filesize, excluded_paths, stats):
+def startprocessing(search_path, max_filesize, excluded_paths, stats, temp_path):
     if os.path.isfile(search_path):
-        process_single_file(search_path, max_filesize, excluded_paths, stats)
+        process_single_file(search_path, max_filesize, excluded_paths, stats, temp_path)
     elif os.path.isdir(search_path):
-        process_directory(search_path, max_filesize, excluded_paths, stats)
+        process_directory(search_path, max_filesize, excluded_paths, stats, temp_path)
 
 
 def usage_and_arguments():
@@ -173,6 +177,7 @@ cryptocurrency addresses or seed strings. Additionally, it searches for common w
     parser.add_argument('path', type=str, help='The path or file to search in.')
     parser.add_argument('--maxfilesize', type=convertsizestring_to_bytesint, default='20GB', help='Optional: Maximum file size to scan (e.g. 10B, 10KB, 10MB, 10GB). Default is 20GB.')
     parser.add_argument('--excludepaths', type=str, nargs='*', default=[], help='Optional: A list of directories to exclude from the search.')
+    parser.add_argument('--temppath', type=str, help='Optional: Set a specific temporary directory path.')
     parser.add_argument('--xlsx', action='store_true', help='Optional: Convert the CSV output to an Excel file.\n ')
 
     if len(sys.argv) <= 1:
@@ -192,10 +197,12 @@ cryptocurrency addresses or seed strings. Additionally, it searches for common w
     print(f"Max file size: {args.maxfilesize[1]} ({args.maxfilesize[0]} bytes)")
     if args.excludepaths:
         print(f"Excluded directories: {args.excludepaths}")
+    if args.temppath:
+        print(f"Set temporary directory: {args.temppath}")
     if args.xlsx:
         print("CSV output will be converted to Excel format.")
     print()
-    return args.path, args.maxfilesize[0], args.excludepaths, args.xlsx
+    return args.path, args.maxfilesize[0], args.excludepaths, args.temppath, args.xlsx
 
 
 def convert_csv_to_excel(csv_filename):
@@ -228,11 +235,11 @@ if __name__ == '__main__':
 
     arguments = usage_and_arguments()
 
-    searchpath, maxfilesize, excludedpaths, xlsx_check = arguments
+    searchpath, maxfilesize, excludedpaths, temppath, xlsx_check = arguments
 
     starttime = time.perf_counter()
 
-    startprocessing(searchpath, maxfilesize, excludedpaths, statistics)
+    startprocessing(searchpath, maxfilesize, excludedpaths, statistics, temppath)
 
     print()
     print(f"Processing took: {str(datetime.timedelta(seconds=int(time.perf_counter() - starttime)))} processing time")

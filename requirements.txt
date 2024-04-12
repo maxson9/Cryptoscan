@@ -12,6 +12,3 @@ pyqt5
 rarfile
 striprtf
 web3>=6.15.1
-
-#libewf-python # Only needed for forensic_read.py which is work in progress.
-#pytsk3

@@ -66,7 +66,6 @@ Cryptoscan.py [-h] [--maxfilesize MAXFILESIZE]
 * work on forensic_read.py. input a 001, e01
 * Add improved result for .ufdr files so it's multiprocessed
 * Add zip file support, same as for ufdr
-* Add temp file location settings
 
 
 ## Bugs

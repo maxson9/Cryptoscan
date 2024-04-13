@@ -62,11 +62,14 @@ Cryptoscan.py [-h] [--maxfilesize MAXFILESIZE]
 * See if match with patterns and long seed strings in all the different supported filetypes. look at the interesting files part to see if it can be lowered
 
 
-### Bugs
-* Files above max file size gets rejected even if single file input
-
-
 ### New features
 * work on forensic_read.py. input a 001, e01
 * Add improved result for .ufdr files so it's multiprocessed
 * Add zip file support, same as for ufdr
+* Add temp file location settings
+
+
+## Bugs
+* Files above max file size gets rejected even if single file input
+
+

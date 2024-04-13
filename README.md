@@ -72,3 +72,4 @@ Cryptoscan.py [-h] [--maxfilesize MAXFILESIZE]
 ## Bugs
 * Files above max file size gets rejected even if single file input
 
+

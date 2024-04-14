@@ -1,22 +1,23 @@
-# Cryptoscan 2.0
+# Cryptoscan
 This tool recursively scans a specified file or path for files that might contain 
-cryptocurrency addresses or seed strings. Additionally, it searches for common wallet file names and paths. 
-    
-## Usage: 
+cryptocurrency addresses or seed strings. Additionally, it searches for common wallet file names and paths.
+
+You can also provide Cryptoscan with a single .ufdr or .zip file and it will parse it multiprocessed. 
+
+## Usage:
+
 Cryptoscan.py [-h] [--maxfilesize MAXFILESIZE]
-                     [--excludepaths [EXCLUDEPATHS ...]]
+                     [--excludepaths [EXCLUDEPATHS ...]] [--temppath TEMPPATH]
+                     [--xlsx]
                      path
 
-  -h, --help            show this help message and exit
-  
-  --maxfilesize MAXFILESIZE
-                        Optional: Maximum file size to scan (e.g. 10B, 10KB,
-                        10MB, 10GB). Default is 20GB.
-                        
-  --excludepaths [EXCLUDEPATHS ...]
-                        Optional: A list of directories to exclude from the
-                        search.
-
+- **path**: The path or file to search in.
+#### Optional Arguments:
+- **-h, --help**: Show this help message and exit.
+- **--maxfilesize MAXFILESIZE**: Optional. Maximum file size to scan. E.g., '10B', '10KB', '10MB', '10GB'. Default is '20GB'.
+- **--excludepaths [EXCLUDEPATHS ...]**: Optional. A list of directories to exclude from the search.
+- **--temppath TEMPPATH**: Optional. Set a specific temporary directory path.
+- **--xlsx**: Optional. Convert the CSV output to an Excel file.
 
 ## Supported addresses and seed strings:
 #### Bitcoin:
@@ -51,11 +52,9 @@ Cryptoscan.py [-h] [--maxfilesize MAXFILESIZE]
 ## TODO:
 
 ### Performance
-* mmap and normal read comparison
-* check performance on special data. html seems slow
-* test lock enable and disable. large performance hit.
-* read_in_chunks: check performance compared to else, all of the different run configs. also check why second chunks memory is larger than first (?)
-* compare with old cryptoscan on images, comp & usb
+* Check performance on special data. Html seems slow - maybe another module needed?
+* Check lock enable and disable as it's a large performance hit with lock.
+* Compare performance with old Cryptoscan images, comp & usb
 
 
 ### Validation
@@ -63,12 +62,11 @@ Cryptoscan.py [-h] [--maxfilesize MAXFILESIZE]
 
 
 ### New features
-* work on forensic_read.py. input a 001, e01
-* Add improved result for .ufdr files so it's multiprocessed
-* Add zip file support, same as for ufdr
-
+* Add support for reading forensic images directly. Would need a new module for file handling.
+* Make patterns filterable
+* Remove some patterns that aren't used often
 
 ## Bugs
-* Files above max file size gets rejected even if single file input
+* N/A
 
 

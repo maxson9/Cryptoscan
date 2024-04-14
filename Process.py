@@ -460,7 +460,7 @@ def file_data_search(filedata, filepath, printablesize):
 
     for pattern, description in patterns:
         current_time = time.time()
-        if current_time - last_check_time > 10:
+        if current_time - last_check_time > 15:
             last_check_time = current_time
             printabletime = datetime.datetime.now().strftime("%H:%M:%S")
             print(f"{printabletime}: Still processing {filepath} ({printablesize}). Currently searching for: {description}.")
@@ -496,6 +496,10 @@ def file_data_search(filedata, filepath, printablesize):
 
 def read_in_chunks(file_instance, overlap_size=1024):
     chunk_size = int((psutil.virtual_memory().available / int(multiprocessing.cpu_count() - 2)) * 0.90)
+    total_size = file_instance.getfilesize()
+    total_chunks = (total_size // chunk_size) + (1 if total_size % chunk_size > 0 else 0)
+    current_chunk = 1
+
     with open(file_instance.getfilepath(), 'rb') as file:
         prev_chunk_end = b''
         while True:
@@ -503,8 +507,9 @@ def read_in_chunks(file_instance, overlap_size=1024):
             if not chunk:
                 break
             combined_chunk = prev_chunk_end + chunk
-            yield combined_chunk
+            yield combined_chunk, current_chunk, total_chunks
             prev_chunk_end = chunk[-overlap_size:]
+            current_chunk += 1
 
 
 def process_file(inputmaxsize, excluded_paths, archive_path, temppath, file_path):
@@ -542,15 +547,19 @@ def process_file(inputmaxsize, excluded_paths, archive_path, temppath, file_path
 
             elif file_instance.getfilesize() > 1024 * 1024 * 1024:
                 combined_results = [[], [], []]
-                for file_data in read_in_chunks(file_instance):
+                for file_data, chunk_num, total_chunks in read_in_chunks(file_instance):
+                    chunk_size = len(file_data)
+                    for unit in ['B', 'KB', 'MB', 'GB']:
+                        if chunk_size < 1024.0:
+                            break
+                        chunk_size /= 1024.0
+                    print(f"{printabletime}: Processing {file_path}: Chunk {chunk_num} of {total_chunks}, approximately {chunk_size:.{0}f}{unit}.")
                     chunk_results = file_data_search(file_data, file_path, file_instance.getfilesize_printable())
                     combined_results = [combined + chunk for combined, chunk in zip(combined_results, chunk_results)]
-
                 results = combined_results
 
             else:
                 with open(file_instance.getfilepath(), 'rb') as file, mmap(file.fileno(), 0, access=ACCESS_READ) as mmapfile:
-                    # with open(file_instance.getfilepath(), 'rb') as file:
                     results = file_data_search(mmapfile.read(), file_path, file_instance.getfilesize_printable())
 
         if found_wallet_file:

@@ -44,7 +44,6 @@ class CryptoscanThread(QThread):
                     self.stop()
                     break
 
-
             self.process.stdout.close()
             self.process.stderr.close()
             self.process.wait()
@@ -103,9 +102,18 @@ class CryptoscanGUI(QWidget):
         self.path_label = QLabel('Path:')
         self.path_label.setFont(self.label_font)
         self.path_edit = QLineEdit()
+        self.path_edit.setPlaceholderText("Select path")
         self.browse_button = QPushButton('Browse', clicked=self.browse_search_directory)
         self.browse_button.setFont(self.button_font)
-        self.browse_button.setMaximumWidth((140))
+        self.browse_button.setMaximumWidth(140)
+
+        self.temp_path_label = QLabel('Temporary Path:')
+        self.temp_path_label.setFont(self.label_font)
+        self.temp_path_edit = QLineEdit()
+        self.temp_path_edit.setPlaceholderText("Select temporary path")
+        self.temp_browse_button = QPushButton('Browse Temp Path', clicked=self.browse_temp_directory)
+        self.temp_browse_button.setFont(self.button_font)
+        self.temp_browse_button.setMaximumWidth(180)
 
         self.optional_label = QLabel('Optional:')
         self.optional_label.setFont(self.label_font_larger_italic)
@@ -116,7 +124,7 @@ class CryptoscanGUI(QWidget):
         self.xlsx_label.setFixedWidth(162)
         self.xlsx_checkbox = QCheckBox()
 
-        self.max_size_label = QLabel('Max File Size (optional): ')
+        self.max_size_label = QLabel('Max File Size:')
         self.max_size_label.setFont(self.label_font)
         self.max_size_label.setFixedWidth(162)
         self.max_size_edit = QLineEdit()
@@ -124,23 +132,23 @@ class CryptoscanGUI(QWidget):
         self.max_size_edit.setMaximumWidth(80)
         self.size_unit_combobox = QComboBox()
         self.size_unit_combobox.addItems(['B', 'KB', 'MB', 'GB'])
-        self.size_unit_combobox.setMaximumWidth((60))
+        self.size_unit_combobox.setMaximumWidth(60)
 
-        self.exclude_label = QLabel('Exclude Paths (optional):')
+        self.exclude_label = QLabel('Exclude Paths:')
         self.exclude_label.setFont(self.label_font)
         self.exclude_list = QListWidget()
         self.exclude_list.setMaximumHeight(100)
         self.add_path_button = QPushButton('Add Path', clicked=self.browse_and_add_path)
         self.add_path_button.setFont(self.button_font)
-        self.add_path_button.setMaximumWidth((180))
+        self.add_path_button.setMaximumWidth(180)
         self.remove_path_button = QPushButton('Remove Selected Path', clicked=self.remove_selected_path)
         self.remove_path_button.setFont(self.button_font)
-        self.remove_path_button.setMaximumWidth((190))
+        self.remove_path_button.setMaximumWidth(190)
 
         self.run_button = QPushButton('Run Cryptoscan', clicked=self.run_stop_cryptoscan)
         self.run_button.setFont(self.button_font)
         self.run_button.setObjectName('runButton')
-        self.run_button.setMaximumWidth((400))
+        self.run_button.setMaximumWidth(400)
 
         self.output_label = QLabel('Output:')
         self.output_label.setFont(self.label_font_larger)
@@ -193,6 +201,13 @@ class CryptoscanGUI(QWidget):
         exclude_layout_buttons.addWidget(self.remove_path_button)
         exclude_layout_buttons.addStretch()
 
+        temp_path_layout = QHBoxLayout()
+        temp_path_layout.addWidget(self.temp_path_label)
+        temp_path_layout.addWidget(self.temp_path_edit)
+
+        temp_path_layout_button = QHBoxLayout()
+        temp_path_layout_button.addWidget(self.temp_browse_button)
+
         run_button_layout = QHBoxLayout()
         run_button_layout.addWidget(self.run_button)
 
@@ -210,8 +225,10 @@ class CryptoscanGUI(QWidget):
         optional_group_layout.addLayout(max_size_layout)
         optional_group_layout.addLayout(exclude_layout)
         optional_group_layout.addLayout(exclude_layout_buttons)
+        optional_group_layout.addLayout(temp_path_layout)
+        optional_group_layout.addLayout(temp_path_layout_button)
         optional_group_box.setLayout(optional_group_layout)
-        optional_group_box.setFixedHeight(200)
+        optional_group_box.setFixedHeight(300)
         optional_group_box.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
@@ -237,6 +254,11 @@ class CryptoscanGUI(QWidget):
         if folder_path:
             self.path_edit.setText(folder_path)
 
+    def browse_temp_directory(self):
+        folder_path = QFileDialog.getExistingDirectory(self, "Select Temporary Directory", options=QFileDialog.DontUseNativeDialog)
+        if folder_path:
+            self.temp_path_edit.setText(folder_path)
+
     def browse_and_add_path(self):
         folder_path = QFileDialog.getExistingDirectory(self, "Select Directory", options=QFileDialog.DontUseNativeDialog)
         if folder_path:
@@ -255,8 +277,8 @@ class CryptoscanGUI(QWidget):
             search_path = self.path_edit.text()
             use_max_size = self.max_size_edit.text()
             max_filesize = f"{use_max_size} {self.size_unit_combobox.currentText()}"
-
             excluded_paths = [self.exclude_list.item(i).text() for i in range(self.exclude_list.count())]
+            temp_path = self.temp_path_edit.text()
 
             convert_to_xlsx = self.xlsx_checkbox.isChecked()
 
@@ -267,6 +289,8 @@ class CryptoscanGUI(QWidget):
                 command.extend(['--excludepaths'] + excluded_paths)
             if convert_to_xlsx:
                 command.extend(['--xlsx'])
+            if temp_path:
+                command.extend(['--temppath', temp_path])
 
             self.thread.set_command(command)
             self.thread.start()

@@ -87,10 +87,10 @@ def write_to_csv(result, file, stats_):
 def process_single_file(path, max_filesize, excl_paths, stats_, temppath_):
     lock = multiprocessing.Lock()
     extension = os.path.splitext(path)[1].lower()
-    if extension == '.ufdr':
-        process_ufdr(path, max_filesize, excl_paths,stats_, temppath_)
+    if extension == '.ufdr' or extension == '.zip':
+        process_single_archive(path, max_filesize, excl_paths, stats_, temppath_)
     else:
-        result = Process.process_file(max_filesize, excl_paths, None, temppath_, path)
+        result = Process.process_file(1000000000000, excl_paths, None, temppath_, path)
         try:
             stats_.processed_files_count += 1
             stats_.total_bytes_processed += int(result[2])
@@ -102,14 +102,14 @@ def process_single_file(path, max_filesize, excl_paths, stats_, temppath_):
             print(f'Error: {err}')
 
 
-def process_ufdr(path, max_filesize, excl_paths, stats_, temppath_):
+def process_single_archive(path, max_filesize, excl_paths, stats_, temppath_):
     if temppath_:
         temp_dir = tempfile.TemporaryDirectory(dir=temppath_)
     else:
         temp_dir = tempfile.TemporaryDirectory()
     with temp_dir as temp_dir:
         with zipfile.ZipFile(path, 'r') as archive_ref:
-            print("Processing .ufdr file. Make sure you have enough storage space as all files will be extracted to a temp directory.")
+            print("Processing single archive file. Make sure you have enough storage space as all files will be extracted to a temp directory.")
             archive_ref.extractall(temp_dir)
             cpucount = multiprocessing.cpu_count() - 2
             pool = multiprocessing.Pool(cpucount, init_worker)

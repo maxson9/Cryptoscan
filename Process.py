@@ -19,17 +19,12 @@ from FileHandler import FileHandler
 
 patterns = [
     (re.compile(rb'xprv[a-km-zA-HJ-NP-Z1-9]{107,108}'), 'BIP32 HD wallet private node'),
-    (re.compile(rb'x\x00p\x00r\x00v\x00([a-km-zA-HJ-NP-Z1-9]\x00){107,108}'), 'BIP32 HD wallet private node'),  # (escape characters)
     (re.compile(rb'xpub[a-km-zA-HJ-NP-Z1-9]{107,108}'), 'BIP32 HD wallet public node'),
-    (re.compile(rb'x\x00p\x00u\x00b\x00([a-km-zA-HJ-NP-Z1-9]\x00){107,108}'), 'BIP32 HD wallet public node'),  # (escape characters)
     (re.compile(rb'4[0-9AB][1-9A-HJ-NP-Za-km-z]{93}'), 'Monero Address'),
     (re.compile(rb'bc0[ac-hj-np-z02-9]{59}'), 'Bitcoin Address Bech32'),
     (re.compile(rb'6P[a-km-zA-HJ-NP-Z1-9]{56}'), 'BIP38 Encrypted Private Key'),
-    (re.compile(rb'6\x00P\x00([a-km-zA-HJ-NP-Z1-9]\x00){56}'), 'BIP38 Encrypted Private Key'),  # (escape characters)
     (re.compile(rb'[KL][a-km-zA-HJ-NP-Z1-9]{51}'), 'WIF Private key compressed public key'),
-    (re.compile(rb'[KL]\x00([a-km-zA-HJ-NP-Z1-9]\x00){51}'), 'WIF Private key compressed public key'),  # (escape characters)
     (re.compile(rb'5[a-km-zA-HJ-NP-Z1-9]{50}'), 'WIF Private key uncompressed public key'),
-    (re.compile(rb'5\x00([a-km-zA-HJ-NP-Z1-9]\x00){50}'), 'WIF Private key uncompressed public key'),  # (escape characters)
     (re.compile(rb'bitcoincash:\s?[qp]([0-9a-zA-Z]{41})'), 'Bitcoin Cash Address'),
     (re.compile(rb'0x[0-9a-fA-F]{40}'), 'Ethereum Address'),
     (re.compile(rb'bc0[ac-hj-np-z02-9]{39}'), 'Bitcoin Address Bech32'),
@@ -38,9 +33,7 @@ patterns = [
     (re.compile(rb'D{1}[5-9A-HJ-NP-U]{1}[1-9A-HJ-NP-Za-km-z]{32}'), 'DOGE Address'),
     (re.compile(rb'r[1-9A-HJ-NP-Za-km-z]{27,35}'), 'Ripple Address'),
     (re.compile(rb'1[a-km-zA-HJ-NP-Z1-9]{25,34}'), 'Bitcoin Address'),
-    (re.compile(rb'1\x00([a-km-zA-HJ-NP-Z1-9]\x00){25,34}'), 'Bitcoin Address'),  # (escape characters)
     (re.compile(rb'3[a-km-zA-HJ-NP-Z1-9]{25,34}'), 'Bitcoin Address P2SH'),
-    (re.compile(rb'3\x00([a-km-zA-HJ-NP-Z1-9]\x00){25,34}'), 'Bitcoin Address P2SH'),  # (escape characters)
     (re.compile(rb'bc1[ac-hj-np-z02-9]{8,87}'), 'Bitcoin Address Bech32'),
     (re.compile(rb'([a-zA-Z]{3,12}\s){11}[a-zA-Z]{3,12}'), 'BIP-39 Seed String')
 ]
@@ -399,6 +392,10 @@ monero_wordlist = {'abbey', 'abducts', 'ability', 'ablaze', 'abnormal', 'abort',
                    'zippers', 'zodiac', 'zombie', 'zones', 'zoom'}
 
 
+def get_printabletime():
+    return datetime.datetime.now().strftime("%H:%M:%S")
+
+
 def overlapping_offset(start, end, existing_offsets):
     for existing_start, existing_end in existing_offsets:
         if existing_start <= start <= existing_end or existing_start <= end <= existing_end:
@@ -443,9 +440,9 @@ def find_bip39_word_sequences(filedata, used_patterns, found_addresses, match_of
                         current_wordlist = None
 
     except UnicodeDecodeError as err:
-        print(f"Unicode decode error in longseed processing: {err}")
+        print(f"{get_printabletime()}: Unicode decode error in longseed processing: {err}")
     except Exception as err:
-        print(f"Unexpected error in longseed processing: {err}")
+        print(f"{get_printabletime()}: Unexpected error in longseed processing: {err}")
 
 
 def file_data_search(filedata, filepath, printablesize):
@@ -462,8 +459,7 @@ def file_data_search(filedata, filepath, printablesize):
         current_time = time.time()
         if current_time - last_check_time > 15:
             last_check_time = current_time
-            printabletime = datetime.datetime.now().strftime("%H:%M:%S")
-            print(f"{printabletime}: Still processing {filepath} ({printablesize}). Currently searching for: {description}.")
+            print(f"{get_printabletime()}: Still processing {filepath} ({printablesize}). Currently searching for: {description}.")
         for match in pattern.finditer(filedata):
             start, end = match.start(), match.end()
 
@@ -518,14 +514,11 @@ def process_file(inputmaxsize, excluded_paths, archive_path, temppath, file_path
 
     if file_instance.check_if_excluded(excluded_paths):
         return False
-    printabletime = datetime.datetime.now().strftime("%H:%M:%S")
 
     if archive_path:
-        file_path_printable = archive_path.replace("\\", "/")
-    else:
-        file_path_printable = file_path.replace("\\", "/")
+        file_path = archive_path
 
-    print(f"{printabletime}: Scanning: {file_path_printable} ({file_instance.getfilesize_printable()})")
+    print(f"{get_printabletime()}: Scanning: {file_path} ({file_instance.getfilesize_printable()})")
     found_wallet_file = WalletFinder.findwallets(file_path)
     found_wallet_path = WalletFinder.findwalletpath(file_path)
 
@@ -537,7 +530,7 @@ def process_file(inputmaxsize, excluded_paths, archive_path, temppath, file_path
         supported_archives = ['.zip', '.7z', '.tar', '.gz', '.tgz', '.rar']
 
         if file_instance.getfileextension() in supported_archives:
-            print(f"{printabletime}: Extracting files from: {file_path_printable}")
+            print(f"{get_printabletime()}: Extracting files from: {file_path}")
             results = process_archive_file(inputmaxsize, excluded_paths, temppath, file_path)
         else:
             file_data = file_instance.getspecialfiledata()
@@ -553,7 +546,7 @@ def process_file(inputmaxsize, excluded_paths, archive_path, temppath, file_path
                         if chunk_size < 1024.0:
                             break
                         chunk_size /= 1024.0
-                    print(f"{printabletime}: Processing {file_path}: Chunk {chunk_num} of {total_chunks}, approximately {chunk_size:.{0}f}{unit}.")
+                    print(f"{get_printabletime()}: Processing {file_path}: Chunk {chunk_num} of {total_chunks}, approximately {chunk_size:.{0}f}{unit}.")
                     chunk_results = file_data_search(file_data, file_path, file_instance.getfilesize_printable())
                     combined_results = [combined + chunk for combined, chunk in zip(combined_results, chunk_results)]
                 results = combined_results
@@ -573,9 +566,8 @@ def process_file(inputmaxsize, excluded_paths, archive_path, temppath, file_path
             results[2].append(0)
 
         gc.collect()
-        printabletime = datetime.datetime.now().strftime("%H:%M:%S")
 
-        print(f"{printabletime}: Done with: {file_path_printable} ({file_instance.getfilesize_printable()})")
+        print(f"{get_printabletime()}: Done with: {file_path} ({file_instance.getfilesize_printable()})")
 
         if archive_path or file_instance.getfileextension() in supported_archives:
             return results, archive_path, filesize
@@ -583,7 +575,7 @@ def process_file(inputmaxsize, excluded_paths, archive_path, temppath, file_path
             return results, file_path, filesize
 
     except Exception as err:
-        print(f"An error occurred while processing the file: {err}")
+        print(f"{get_printabletime()}: An error occurred while processing the file: {err}")
         return False
 
 
@@ -603,7 +595,7 @@ def extract_archive(archive_file_path, extract_to):
             with rarfile.RarFile(archive_file_path, 'r') as archive_ref:
                 archive_ref.extractall(extract_to)
     except Exception as err:
-        print(f"Error extracting archive {archive_file_path}: {err}")
+        print(f"{get_printabletime()}: Error extracting archive {archive_file_path}: {err}")
 
 
 def process_archive_file(inputmaxsize, excluded_paths, temppath_, archive_file_path):
@@ -638,7 +630,7 @@ def process_archive_file(inputmaxsize, excluded_paths, temppath_, archive_file_p
                         continue
 
                     relative_path = os.path.relpath(full_path, temp_dir)
-                    archive_file_path_printable = os.path.join(archive_file_path, relative_path).replace('/', "\\")
+                    archive_file_path_printable = os.path.join(archive_file_path, relative_path)
 
                     file_results = process_file(inputmaxsize, excluded_paths, archive_file_path_printable, temppath_, full_path)
                     if file_results:
@@ -647,4 +639,4 @@ def process_archive_file(inputmaxsize, excluded_paths, temppath_, archive_file_p
         return results
 
     except Exception as err:
-        print(f"Error reading archive: {err}")
+        print(f"{get_printabletime()}: Error reading archive: {err}")

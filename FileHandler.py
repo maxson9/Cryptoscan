@@ -1,3 +1,4 @@
+import datetime
 import os
 from mmap import ACCESS_READ, mmap
 
@@ -10,13 +11,16 @@ from striprtf.striprtf import rtf_to_text
 excluded_filenames = 'ChromeExtMalware.store'  # Excluded because of false positives
 
 
+def get_printabletime():
+    return datetime.datetime.now().strftime("%H:%M:%S")
+
+
 class FileHandler:
     """
     FileHandler takes a file as input and deals with all file related parts.
     """
     def __init__(self, file_path):
         self.file_path = file_path
-        self.file_path_printable = file_path.replace("\\", "/")
 
     def getfilesize(self):
         try:
@@ -35,26 +39,26 @@ class FileHandler:
     def check_if_excluded(self, excluded_paths):
         for path in excluded_paths:
             if path in self.file_path:
-                print(f"{self.file_path_printable} is excluded due to exclusion path rule: {path}")
+                print(f"{get_printabletime()}: {self.file_path} is excluded due to exclusion path rule: {path}")
                 return True
 
         if self.file_path.endswith(excluded_filenames):
-            print(f"{self.file_path_printable} is excluded due to exclusion file rule: {excluded_filenames}")
+            print(f"{get_printabletime()}: {self.file_path} is excluded due to exclusion file rule: {excluded_filenames}")
             return True
         return False
 
     def filecheck(self, inputfilesize):
         if not os.path.exists(self.file_path):
-            print(self.file_path_printable + " doesn't exist.")
+            print(f"{get_printabletime()}: {self.file_path} doesn't exist.")
             return True
 
         file_size = self.getfilesize()
         if file_size < 15:
-            print(self.file_path_printable + " is too small. Size: " + str(file_size) + "B")
+            print(f"{get_printabletime()}: {self.file_path} is too small. Size: {str(file_size)}B")
             return True
 
         if file_size >= inputfilesize:
-            print(self.file_path_printable + " is too large. Size: " + self.getfilesize_printable())
+            print(f"{get_printabletime()}: {self.file_path} is too large. Size: {self.getfilesize_printable()}")
             return True
 
         return False
@@ -82,7 +86,7 @@ class FileHandler:
         try:
             return bytes(docx2python(self.file_path).text, 'utf-8')
         except Exception as err:
-            print(f"DOCX error - {self.file_path_printable}: {err}")
+            print(f"{get_printabletime()}: DOCX error - {self.file_path}: {err}")
             return False
 
     def htmltobytes(self):
@@ -91,7 +95,7 @@ class FileHandler:
                 soup = BeautifulSoup(mmapfile.read().decode('utf8', 'ignore'), 'html.parser')
                 return bytes(soup.get_text(strip=True), 'utf8')
         except Exception as err:
-            print(f"HTML error - {self.file_path_printable}: {err}")
+            print(f"{get_printabletime()}: HTML error - {self.file_path}: {err}")
             return False
 
     def pdftobytes(self):
@@ -102,7 +106,7 @@ class FileHandler:
                 pdftext += page.get_text()
             return bytes(pdftext, 'utf-8')
         except Exception as err:
-            print(f"PDF error - {self.file_path_printable}: {err}")
+            print(f"{get_printabletime()}: PDF error - {self.file_path}: {err}")
             return False
 
     def rtftobytes(self):
@@ -110,7 +114,7 @@ class FileHandler:
             with open(self.file_path, 'rb') as file, mmap(file.fileno(), 0, access=ACCESS_READ) as mmapfile:
                 return bytes(rtf_to_text(mmapfile.read().decode('utf8'), errors='ignore'), 'utf-8')
         except Exception as err:
-            print(f"RTF error - {self.file_path_printable}: {err}")
+            print(f"{get_printabletime()}: RTF error - {self.file_path}: {err}")
             return False
 
     def xlsxtobytes(self):
@@ -122,7 +126,7 @@ class FileHandler:
                     pandas.read_excel(self.file_path, sheet_name=sheet, engine="openpyxl"))
             return bytes(text, 'utf8')
         except Exception as err:
-            print(f"XLSX error - {self.file_path_printable}: {err}")
+            print(f"{get_printabletime()}: XLSX error - {self.file_path}: {err}")
             return False
 
     def getfilepath(self):

@@ -9,9 +9,11 @@ import time
 import zipfile
 from mmap import ACCESS_READ, mmap
 
+import mnemonic
 import psutil
 import py7zr
 import rarfile
+import regex
 
 import Validator
 import WalletFinder
@@ -35,7 +37,7 @@ patterns = [
     (re.compile(rb'1[a-km-zA-HJ-NP-Z1-9]{25,34}'), 'Bitcoin Address'),
     (re.compile(rb'3[a-km-zA-HJ-NP-Z1-9]{25,34}'), 'Bitcoin Address P2SH'),
     (re.compile(rb'bc1[ac-hj-np-z02-9]{8,87}'), 'Bitcoin Address Bech32'),
-    (re.compile(rb'([a-zA-Z]{3,12}\s){11}[a-zA-Z]{3,12}'), 'BIP-39 Seed String')
+    (regex.compile(rb'([a-zA-Z]{3,12}\s){11,23}[a-zA-Z]{3,12}'), 'BIP-39 Seed String')
 ]
 
 wordlist = {'abandon','ability','able','about','above','absent','absorb','abstract','absurd','abuse','access','accident',
@@ -450,6 +452,7 @@ def file_data_search(filedata, filepath, printablesize):
     found_seedstrings_count = 0
     start_time = time.time()
     last_check_time = start_time
+    mnemonic_english = mnemonic.Mnemonic("English")
 
     used_offsets = []
     used_patterns = []
@@ -460,19 +463,45 @@ def file_data_search(filedata, filepath, printablesize):
         if current_time - last_check_time > 15:
             last_check_time = current_time
             print(f"{get_printabletime()}: Still processing {filepath} ({printablesize}). Currently searching for: {description}.")
-        for match in pattern.finditer(filedata):
-            start, end = match.start(), match.end()
 
-            if description == 'BIP-39 Seed String':
+        if description == 'BIP-39 Seed String':
+            matched_offsets = set()
+            for match in regex.finditer(pattern, filedata, overlapped=True):
+                start, end = match.start(), match.end()
                 words = match.group().decode('utf8').lower().split()
-                if len(set(words)) == 12 and (all(word in wordlist for word in words) or all(word in monero_wordlist for word in words)):
-                    seed_string = ' '.join(words)
-                    used_patterns.append('BIP-39 Seed String')
-                    found_addresses.append(seed_string)
-                    match_offset.append(start)
-                    found_seedstrings_count += 1
+                seed_string = ' '.join(words)
 
-            else:
+                if any(start in offset_window for offset_window in matched_offsets):    # Check if already have match in this offset window
+                    continue
+
+                '''
+                Seed generators
+                https://iancoleman.io/bip39/ bip39
+                https://xmr.llcoins.net/ monero
+                
+                TODO: rewrite interesting file
+                      add support for monero in function below
+                '''
+
+                if len(set(words)) >= 12 and (all(word in wordlist for word in words) or all(word in monero_wordlist for word in words)):
+                    for length in [24, 12]:
+                        for i in range(len(words) - length + 1):
+                            current_seed_string = ' '.join(words[i:i + length])
+
+                            if mnemonic_english.check(current_seed_string):
+                                used_patterns.append('BIP-39 Seed String')
+                                found_addresses.append(seed_string)
+                                match_offset.append(start)
+                                found_seedstrings_count += 1
+                                matched_offsets.add(range(start, end))
+                                break
+                        else:
+                            continue
+                        break
+
+        else:
+            for match in pattern.finditer(filedata):
+                start, end = match.start(), match.end()
                 matched_string = filedata[start:end].decode("utf-8")
                 if Validator.validate_address(matched_string, description):
                     if not overlapping_offset(start, end, used_offsets):

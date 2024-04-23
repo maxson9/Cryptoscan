@@ -2,7 +2,6 @@ import coinaddrvalidator
 import monero
 from base58 import b58decode_check
 from monero import address
-from web3 import Web3
 
 
 def validate_address(inputaddress, pattern):
@@ -32,7 +31,7 @@ def validate_address(inputaddress, pattern):
 
     elif 'Ethereum Address' == pattern:
         try:
-            return Web3.is_address(inputaddress)
+            return coinaddrvalidator.validate('ethereum', inputaddress)
         except TypeError:
             return False
         except ValueError:
@@ -108,13 +107,14 @@ def validate_address(inputaddress, pattern):
 
     elif 'Bitcoin Cash Address' == pattern:
         try:
-            return True
+            return True     # Returns true because as long as it has matched the regex, it should be a good match
         except:
             return False
 
 
 def ethereum_check_if_unverifyable(inputaddress):
-    if (inputaddress[2:].islower() or inputaddress[2:].isupper()) or (inputaddress[2:].isalpha()) or inputaddress[2:].isnumeric():
+    address_substring = inputaddress[2:]
+    if (address_substring.islower() or address_substring.isupper()) or address_substring.isalpha() or address_substring.isnumeric():
         return True
 
 

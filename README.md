@@ -63,8 +63,7 @@ Cryptoscan.py [-h] [--maxfilesize MAXFILESIZE]
 
 ### New features
 * Add support for reading forensic images directly. Would need a new module for file handling.
-* Make patterns filterable
-* Remove some patterns that aren't used often
+* Make patterns filterable - especially interesting with Ethereum (Unverifyable)
 
 ## Bugs
 * N/A

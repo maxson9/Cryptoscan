@@ -398,13 +398,6 @@ def get_printabletime():
     return datetime.datetime.now().strftime("%H:%M:%S")
 
 
-def overlapping_offset(start, end, existing_offsets):
-    for existing_start, existing_end in existing_offsets:
-        if existing_start <= start <= existing_end or existing_start <= end <= existing_end:
-            return True
-    return False
-
-
 def check_lexicographic_order(string):
     words = string.split()
     prev_word = ""
@@ -463,7 +456,7 @@ def file_data_search(filedata, filepath, printablesize):
     start_time = time.time()
     last_check_time = start_time
 
-    used_offsets = []
+    used_offsets = set()
     used_patterns = []
     match_offset = []
 
@@ -474,13 +467,11 @@ def file_data_search(filedata, filepath, printablesize):
             print(f"{get_printabletime()}: Still processing {filepath} ({printablesize}). Currently searching for: {description}.")
 
         if description == 'BIP-39 Seed String':
-            matched_offsets = set()
             for match in regex.finditer(pattern, filedata, overlapped=True):
                 start, end = match.start(), match.end()
                 words = match.group().decode('utf8').lower().split()
-                seed_string = ' '.join(words)
 
-                if any(start in offset_window for offset_window in matched_offsets):    # Check if already have match in this offset window
+                if any(start in offset_window for offset_window in used_offsets):    # Check if already have match in this offset window
                     continue
 
                 '''
@@ -502,7 +493,7 @@ def file_data_search(filedata, filepath, printablesize):
                                     found_addresses.append(current_seed_string)
                                     match_offset.append(start)
                                     found_seedstrings_count += 1
-                                    matched_offsets.add(range(start, end))
+                                    used_offsets.add(range(start, start + len(current_seed_string)))
                                     break
                         else:
                             continue
@@ -513,14 +504,16 @@ def file_data_search(filedata, filepath, printablesize):
                 start, end = match.start(), match.end()
                 matched_string = filedata[start:end].decode("utf-8")
                 if Validator.validate_address(matched_string, description):
-                    if not overlapping_offset(start, end, used_offsets):
-                        if description == 'Ethereum Address' and Validator.ethereum_check_if_unverifyable(matched_string):
-                            used_patterns.append('Ethereum Address (unverifyable)')
-                        else:
-                            used_patterns.append(description)
-                        found_addresses.append(matched_string)
-                        match_offset.append(start)
-                        used_offsets.append([start, end])
+                    if any(start in range(offset.start, offset.stop) for offset in used_offsets):
+                        continue
+
+                    if description == 'Ethereum Address' and Validator.ethereum_check_if_unverifyable(matched_string):
+                        used_patterns.append('Ethereum Address (unverifyable)')
+                    else:
+                        used_patterns.append(description)
+                    found_addresses.append(matched_string)
+                    match_offset.append(start)
+                    used_offsets.add(range(start, end))
 
     if found_seedstrings_count == 0:
         find_bip39_word_sequences(filedata, used_patterns, found_addresses, match_offset)

@@ -37,7 +37,7 @@ patterns = [
     (re.compile(rb'1[a-km-zA-HJ-NP-Z1-9]{25,34}'), 'Bitcoin Address'),
     (re.compile(rb'3[a-km-zA-HJ-NP-Z1-9]{25,34}'), 'Bitcoin Address P2SH'),
     (re.compile(rb'bc1[ac-hj-np-z02-9]{8,87}'), 'Bitcoin Address Bech32'),
-    (regex.compile(rb'([a-zA-Z]{3,12}\s){11,23}[a-zA-Z]{3,12}'), 'BIP-39 Seed String')
+    (regex.compile(rb'([a-zA-Z]{3,12}\s){11,23}[a-zA-Z]{3,12}'), 'Seed String')
 ]
 bip39_mnemonicvalidator = Bip39MnemonicValidator(Bip39Languages.ENGLISH)
 monero_mnemonicvalidator = MoneroMnemonicValidator(MoneroLanguages.ENGLISH)
@@ -118,7 +118,7 @@ def file_data_search(filedata, filepath, printablesize):
             last_check_time = current_time
             print(f"{get_printabletime()}: Still processing {filepath} ({printablesize}). Currently searching for: {description}.")
 
-        if description == 'BIP-39 Seed String':
+        if description == 'Seed String':
             for match in regex.finditer(pattern, filedata, overlapped=True):
                 start, end = match.start(), match.end()
                 words = match.group().decode('utf8').lower().split()
@@ -135,18 +135,25 @@ def file_data_search(filedata, filepath, printablesize):
                       add support for monero in function below
                 '''
 
-                if len(set(words)) >= 12 and (all(word in wordlist for word in words) or all(word in monero_wordlist for word in words)):
+                if len(set(words)) >= 12:
+                    bip39_valid = all(word in wordlist for word in words)
+                    monero_valid = all(word in monero_wordlist for word in words)
                     for length in [24, 12]:
                         for i in range(len(words) - length + 1):
                             current_seed_string = ' '.join(words[i:i + length]).lower()
-                            if bip39_mnemonicvalidator.IsValid(current_seed_string):
-                                if not check_lexicographic_order(current_seed_string):
+                            valid_check = (bip39_valid and bip39_mnemonicvalidator.IsValid(current_seed_string)) or \
+                                          (monero_valid and monero_mnemonicvalidator.IsValid(current_seed_string))
+                            print(valid_check)
+                            if valid_check and not check_lexicographic_order(current_seed_string):
+                                if bip39_valid:
                                     used_patterns.append('BIP-39 Seed String')
-                                    found_addresses.append(current_seed_string)
-                                    match_offset.append(start)
-                                    found_seedstrings_count += 1
-                                    used_offsets.add(range(start, start + len(current_seed_string)))
-                                    break
+                                elif monero_valid:
+                                    used_patterns.append('Monero Seed String')
+                                found_addresses.append(current_seed_string)
+                                match_offset.append(start)
+                                found_seedstrings_count += 1
+                                used_offsets.add(range(start, start + len(current_seed_string)))
+                                break
                         else:
                             continue
                         break

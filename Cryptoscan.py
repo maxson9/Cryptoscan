@@ -74,7 +74,7 @@ def process_result(result, lock, file, stats_):
 def write_to_csv(result, file, stats_):
     try:
         for pattern, address, offset in zip_longest(result[0][0], result[0][1], result[0][2], fillvalue='N/A'):
-            if "BIP-39 Seed String" in pattern:
+            if "Seed String" in pattern:
                 stats_.count_seedstrings += 1
             else:
                 stats_.count_addresses += 1

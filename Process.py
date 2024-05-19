@@ -37,7 +37,7 @@ patterns = [
     (re.compile(rb'1[a-km-zA-HJ-NP-Z1-9]{25,34}'), 'Bitcoin Address'),
     (re.compile(rb'3[a-km-zA-HJ-NP-Z1-9]{25,34}'), 'Bitcoin Address P2SH'),
     (re.compile(rb'bc1[ac-hj-np-z02-9]{8,87}'), 'Bitcoin Address Bech32'),
-    (regex.compile(rb'([a-zA-Z]{3,12}\s){11,23}[a-zA-Z]{3,12}'), 'Seed String')
+    (regex.compile(rb'([a-zA-Z]{3,12}\s){11,24}[a-zA-Z]{3,12}'), 'Seed String')
 ]
 bip39_mnemonicvalidator = Bip39MnemonicValidator(Bip39Languages.ENGLISH)
 monero_mnemonicvalidator = MoneroMnemonicValidator(MoneroLanguages.ENGLISH)
@@ -60,7 +60,7 @@ def check_lexicographic_order(string):
     return True
 
 
-def find_bip39_word_sequences(filedata, used_patterns, found_addresses, match_offset):
+def deep_seed_search(filedata, used_patterns, found_addresses, match_offset):
     matchcount = 0
     last_match_end = 0
     sequence_start = 0
@@ -133,30 +133,54 @@ def file_data_search(filedata, filepath, printablesize):
                 
                 TODO: rewrite interesting file
                       add support for monero in function below
+                      
+                Monero seeds:
+                    #25 word
+                    lower repent alchemy eden ruling nasty erosion uphill upper pastry yahoo sighting pipeline somewhere noodles emit misery cowl rugged trolling pirate mice hence hobby emit
+                    lower repent alchemy eden ruling nasty erosion uphill upper pastry yahoo sighting pipeline 
+                    lower repent alchemy eden ruling nasty erosion uphill upper pastry yahoo sighting 
+
+                    #13 word
+                    niece bifocals uttered robot romance gaze faxed perfect laptop fall hold strained bifocals
+                    niece bifocals uttered robot romance gaze faxed perfect laptop fall hold strained 
+
                 '''
 
                 if len(set(words)) >= 12:
                     bip39_valid = all(word in wordlist for word in words)
                     monero_valid = all(word in monero_wordlist for word in words)
-                    for length in [24, 12]:
-                        for i in range(len(words) - length + 1):
-                            current_seed_string = ' '.join(words[i:i + length]).lower()
-                            valid_check = (bip39_valid and bip39_mnemonicvalidator.IsValid(current_seed_string)) or \
-                                          (monero_valid and monero_mnemonicvalidator.IsValid(current_seed_string))
-                            print(valid_check)
-                            if valid_check and not check_lexicographic_order(current_seed_string):
-                                if bip39_valid:
+                    if bip39_valid:
+                        for length in [24, 12]:
+                            for i in range(len(words) - length + 1):
+                                current_seed_string = ' '.join(words[i:i + length]).lower()
+                                if bip39_mnemonicvalidator.IsValid(current_seed_string) and not check_lexicographic_order(current_seed_string):
                                     used_patterns.append('BIP-39 Seed String')
-                                elif monero_valid:
+                                    found_addresses.append(current_seed_string)
+                                    match_offset.append(start)
+                                    found_seedstrings_count += 1
+                                    print(found_seedstrings_count)
+
+                                    used_offsets.add(range(start, start + len(current_seed_string)))
+                                    break
+                            else:
+                                continue
+                            break
+
+                    if monero_valid:
+                        for length in [25, 13]:
+                            for i in range(len(words) - length + 1):
+                                current_seed_string = ' '.join(words[i:i + length]).lower()
+                                if monero_mnemonicvalidator.IsValid(current_seed_string) and not check_lexicographic_order(current_seed_string):
                                     used_patterns.append('Monero Seed String')
-                                found_addresses.append(current_seed_string)
-                                match_offset.append(start)
-                                found_seedstrings_count += 1
-                                used_offsets.add(range(start, start + len(current_seed_string)))
-                                break
-                        else:
-                            continue
-                        break
+                                    found_addresses.append(current_seed_string)
+                                    match_offset.append(start)
+                                    found_seedstrings_count += 1
+                                    print(found_seedstrings_count)
+                                    used_offsets.add(range(start, start + len(current_seed_string)))
+                                    break
+                            else:
+                                continue
+                            break
 
         else:
             for match in pattern.finditer(filedata):
@@ -170,12 +194,13 @@ def file_data_search(filedata, filepath, printablesize):
                         used_patterns.append('Ethereum Address (unverifyable)')
                     else:
                         used_patterns.append(description)
+
                     found_addresses.append(matched_string)
                     match_offset.append(start)
                     used_offsets.add(range(start, end))
 
     if found_seedstrings_count == 0:
-        find_bip39_word_sequences(filedata, used_patterns, found_addresses, match_offset)
+        deep_seed_search(filedata, used_patterns, found_addresses, match_offset)
 
     return used_patterns, found_addresses, match_offset
 

@@ -26,10 +26,10 @@ class CryptoscanThread(QThread):
             env['PYTHONUNBUFFERED'] = "1"
             if sys.platform == 'win32':
                 self.process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                                bufsize=1, universal_newlines=True, env=env, encoding='utf8')
+                                                bufsize=1, universal_newlines=True, env=env, encoding='latin1')
             else:
                 self.process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                                bufsize=1, universal_newlines=True, env=env, encoding='utf8',
+                                                bufsize=1, universal_newlines=True, env=env, encoding='latin1',
                                                 preexec_fn=os.setsid)
 
             for line in iter(self.process.stdout.readline, ''):

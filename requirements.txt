@@ -1,7 +1,7 @@
 base58
 bs4
 docx2python
-git+https://github.com/Naggafin/coinaddrvalidator.git # Temporary git until update of coinaddr library on pypi
+coinaddrvalidator
 monero
 openpyxl
 pandas
